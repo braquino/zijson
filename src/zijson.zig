@@ -135,7 +135,7 @@ fn recPath(obj: []const u8, path: [][]const u8) ![]const u8 {
     }
 }
 
-fn getJSONPathObject(obj: []const u8, JSONPath: []const u8, alloc: std.mem.Allocator) ![]const u8 {
+pub fn getJSONPathObject(obj: []const u8, JSONPath: []const u8, alloc: std.mem.Allocator) ![]const u8 {
     if (!eql(u8, JSONPath[0..2], "$.")) {
         return error.BadPathError;
     }
