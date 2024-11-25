@@ -1,3 +1,4 @@
+// zig fmt: off
 const std = @import("std");
 const t = std.testing;
 const eql = std.mem.eql;
@@ -46,8 +47,9 @@ fn getNextObject(obj: []const u8) ![]const u8 {
             }
             if (c == '{' or c == '[') {
                 obj_open += 1;
+                continue;
             }
-            if (c == '}' or c == '}') {
+            if (c == '}' or c == ']') {
                 obj_open -= 1;
                 if (obj_open == 0) {
                     return obj[0 .. i + 1];
@@ -149,6 +151,21 @@ pub fn getJSONPathObject(obj: []const u8, JSONPath: []const u8, alloc: std.mem.A
     return try recPath(obj, path.items[1..]);
 }
 
+export fn getJSONPath(obj: [*:0]const u8, JSONPath: [*:0]const u8, output: [*:0]u8) i32 {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const alloc = gpa.allocator();
+    const zigObj: []const u8 = std.mem.span(obj);
+    const zigJSONPath: []const u8 = std.mem.span(JSONPath);
+    const result = getJSONPathObject(zigObj, zigJSONPath, alloc) catch {
+        return 1;
+    };
+    for (result, 0..) |c, i| {
+        output[i] = c;
+    }
+    output[result.len] = 0;
+    return 0;
+}
+
 test "getObject" {
     const j =
         \\{"foo": 5, "bar": {"hello": 2}, "hello": 3 , "text": "a_text"}
@@ -170,4 +187,13 @@ test "getJSONPathObject" {
 
     const j_hello_lvl2 = try getJSONPathObject(j, "$.bar.hello", alloc);
     try t.expectEqualStrings("2", j_hello_lvl2);
+
+    const json_graph =
+        \\{"input": {"hash": 0, "forward_hashes": [1]},
+        \\"processes": [{"name": "foo", "python": "print('hello')", "hash": 1, "forward_hashes": [2]}],
+        \\"outputs": [{"hash": 2}]
+        \\}
+    ;
+    const j2 = try getJSONPathObject(json_graph, "$.input.hash", alloc);
+    try t.expectEqualStrings("0", j2);
 }
