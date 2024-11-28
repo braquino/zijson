@@ -13,9 +13,12 @@ const BadPathError = error{};
 const NotImplementedError = error{};
 
 const PathType = enum {
-    simple,         // simple path
-    subscript,      // a path + an index
-    star,           // a path + a '*' (star) index
+    /// simple path
+    simple,
+    /// a path + an index         
+    subscript,
+    /// a path + a '*' (star) index
+    star,
 };
 
 const SubscriptPath = struct {
@@ -26,7 +29,7 @@ const SubscriptPath = struct {
 var re_compiled: bool = false;
 var re_subscript: re.regex_t = undefined;
 
-// Must be called before the use of the regex
+/// Must be called before the use of the regex
 fn compileRegex() void {
     if (!re_compiled) {
         var err_code: c_int = undefined;
@@ -39,7 +42,7 @@ fn compileRegex() void {
     }
 }
 
-// Considering the 'path_segment' is of type 'subscript' or 'star', returns your componets (path and subscription)
+/// Considering the 'path_segment' is of type 'subscript' or 'star', returns your componets (path and subscription)
 fn getSubscriptComp(path_segment: []const u8, alloc: std.mem.Allocator) !SubscriptPath {
     compileRegex();
     const c_path_segment = try alloc.dupeZ(u8, path_segment);
@@ -69,7 +72,7 @@ fn getSubscriptComp(path_segment: []const u8, alloc: std.mem.Allocator) !Subscri
     return error.BadPathError;
 }
 
-// Given a 'path_segment', returns its type
+/// Given a 'path_segment', returns its type
 fn checkPathType(path_segment: []const u8, alloc: std.mem.Allocator) !PathType {
     compileRegex();
     const c_path_segment = try alloc.dupeZ(u8, path_segment);
@@ -87,7 +90,7 @@ fn checkPathType(path_segment: []const u8, alloc: std.mem.Allocator) !PathType {
     return PathType.simple;
 }
 
-// Returns the complete next number found, must start from the first object's char
+/// Returns the complete next number found, must start from the first object's char
 fn getNextNumber(obj: []const u8) ![]const u8 {
     for (obj, 0..) |c, i| {
         if (c == ',' or c == ' ' or c == '\t' or c == '\n' or c == '}' or c == ']') {
@@ -97,7 +100,7 @@ fn getNextNumber(obj: []const u8) ![]const u8 {
     return error.ObjectNotFoundError;
 }
 
-// Returns the complete next text found, must start from the first object's char
+/// Returns the complete next text found, must start from the first object's char
 fn getNextText(obj: []const u8) ![]const u8 {
     var i: usize = 0;
     var c: u8 = undefined;
@@ -114,7 +117,7 @@ fn getNextText(obj: []const u8) ![]const u8 {
     return error.ObjectNotFoundError;
 }
 
-// Returns the complete next object or array found, must start from the first object's char
+/// Returns the complete next object or array found, must start from the first object's char
 fn getNextObject(obj: []const u8) ![]const u8 {
     var obj_open: i32 = 0;
     var quoted = false;
@@ -151,14 +154,14 @@ fn getNextObject(obj: []const u8) ![]const u8 {
     return error.ObjectNotFoundError;
 }
 
-// Returns the complete next element found, must start from the first object's char
+/// Returns the complete next element found, must start from the first object's char
 fn getNext(obj: []const u8) ![]const u8 {
     if (obj[0] == '{' or obj[0] == '[') return try getNextObject(obj);
     if (obj[0] == '"') return try getNextText(obj);
     return try getNextNumber(obj);
 }
 
-// Returns a component of a list with the 'index' number
+/// Returns a component of a list with the 'index' number
 fn getSubscript(obj: []const u8, index: i32) ![]const u8 {
     var cur_obj: []const u8 = undefined;
     var init = false;
@@ -187,7 +190,7 @@ fn getSubscript(obj: []const u8, index: i32) ![]const u8 {
     return error.ObjectNotFoundError;
 }
 
-// Returns an inner object with the 'property' key
+/// Returns an inner object with the 'property' key
 fn getObject(obj: []const u8, property: []const u8) ![]const u8 {
     var obj_open: i32 = 0;
     var quoted = false;
@@ -241,6 +244,7 @@ fn getObject(obj: []const u8, property: []const u8) ![]const u8 {
     return error.ObjectNotFoundError;
 }
 
+/// Recursively finds and returns the next path segment
 fn recPath(obj: []const u8, path: [][]const u8, alloc: std.mem.Allocator) ![]const u8 {
     if (path.len > 0) {
         std.debug.print("getObject {s} from: {s}\n", .{ path[0], obj });
@@ -261,6 +265,7 @@ fn recPath(obj: []const u8, path: [][]const u8, alloc: std.mem.Allocator) ![]con
     }
 }
 
+/// Public api to be used as Zig library
 pub fn getJSONPathObject(obj: []const u8, JSONPath: []const u8, alloc: std.mem.Allocator) ![]const u8 {
     if (!eql(u8, JSONPath[0..2], "$.")) {
         return error.BadPathError;
@@ -275,6 +280,7 @@ pub fn getJSONPathObject(obj: []const u8, JSONPath: []const u8, alloc: std.mem.A
     return try recPath(obj, path.items[1..], alloc);
 }
 
+/// Public api exported to C
 export fn getJSONPath(obj: [*:0]const u8, JSONPath: [*:0]const u8, output: [*:0]u8) i32 {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const alloc = gpa.allocator();
