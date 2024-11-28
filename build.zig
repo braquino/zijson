@@ -17,6 +17,7 @@ pub fn build(b: *std.Build) void {
         .target = target, 
         .optimize = optimize 
     });
+    lib_zijson.linkLibC();
     const header = b.addInstallFile(b.path("c_header/zijson.h"), "include/zijson.h");
     //const header = b.addInstallFile(lib_zijson.getEmittedH(), "include/zijson.h");
     b.getInstallStep().dependOn(&header.step);
